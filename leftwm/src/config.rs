@@ -235,17 +235,14 @@ fn load_from_file() -> Result<Config> {
     let path = BaseDirectories::with_prefix("leftwm")?;
 
     // the checks and fallback for `toml` can be removed when toml gets eventually deprecated
-    let config_file_ron = path.place_config_file("config.ron")?;
-    let config_file_toml = path.place_config_file("config.toml")?;
-
-    if Path::new(&config_file_ron).exists() {
+    if let Some(config_file_ron) = path.find_config_file("config.ron") {
         tracing::debug!("Config file '{}' found.", config_file_ron.to_string_lossy());
         let ron = Options::default()
             .with_default_extension(Extensions::IMPLICIT_SOME | Extensions::UNWRAP_NEWTYPES);
         let contents = fs::read_to_string(config_file_ron)?;
         let config: Config = ron.from_str(&contents)?;
         Ok(config)
-    } else if Path::new(&config_file_toml).exists() {
+    } else if let Some(config_file_toml) = path.find_config_file("config.toml") {
         tracing::debug!(
             "Config file '{}' found.",
             config_file_toml.to_string_lossy()
@@ -276,7 +273,8 @@ fn load_from_file() -> Result<Config> {
         );
         let ron_with_header = comment_header + &ron;
 
-        let mut file = File::create(&config_file_ron)?;
+        let config_file_ron = path.place_config_file("config.ron")?;
+        let mut file = File::create(config_file_ron)?;
         file.write_all(ron_with_header.as_bytes())?;
 
         Ok(config)
